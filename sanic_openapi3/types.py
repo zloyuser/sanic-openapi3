@@ -1,225 +1,184 @@
+import json
+from typing import List, Dict, Any, get_type_hints, Optional
 from datetime import date, datetime
 
 
-schemas = {}
+class Definition:
+    __fields: dict
 
-
-class Field:
-    description = str
-    required = bool
-
-    def __init__(self, description=None, required=None):
-        self.description = description
-        self.required = required
-
-    def serialize(self):
-        output = {}
-        if self.description:
-            output['description'] = self.description
-        if self.required is not None:
-            output['required'] = self.required
-        return output
-
-
-class Integer(Field):
-    def serialize(self):
-        return {
-            "type": "integer",
-            "format": "int32",
-            **super().serialize()
-        }
-
-
-class Long(Field):
-    def serialize(self):
-        return {
-            "type": "integer",
-            "format": "int64",
-            **super().serialize()
-        }
-
-
-class Float(Field):
-    def serialize(self):
-        return {
-            "type": "number",
-            "format": "float",
-            **super().serialize()
-        }
-
-
-class Double(Field):
-    def serialize(self):
-        return {
-            "type": "number",
-            "format": "double",
-            **super().serialize()
-        }
-
-
-class String(Field):
-    def serialize(self):
-        return {
-            "type": "string",
-            **super().serialize()
-        }
-
-
-class Byte(Field):
-    def serialize(self):
-        return {
-            "type": "string",
-            "format": "byte",
-            **super().serialize()
-        }
-
-
-class Binary(Field):
-    def serialize(self):
-        return {
-            "type": "string",
-            "format": "binary",
-            **super().serialize()
-        }
-
-
-class Boolean(Field):
-    def serialize(self):
-        return {
-            "type": "boolean",
-            **super().serialize()
-        }
-
-
-class Date(Field):
-    def serialize(self):
-        return {
-            "type": "string",
-            "format": "date",
-            **super().serialize()
-        }
-
-
-class DateTime(Field):
-    def serialize(self):
-        return {
-            "type": "string",
-            "format": "date-time",
-            **super().serialize()
-        }
-
-
-class Password(Field):
-    def serialize(self):
-        return {
-            "type": "string",
-            "format": "password",
-            **super().serialize()
-        }
-
-
-class Tuple(Field):
-    pass
-
-
-class Dictionary(Field):
-    def __init__(self, fields=None, **kwargs):
-        self.fields = fields or {}
-        super().__init__(**kwargs)
-
-    def serialize(self):
-        return {
-            "type": "object",
-            "properties": {key: serialize_schema(schema) for key, schema in self.fields.items()},
-            **super().serialize()
-        }
-
-
-class List(Field):
-    def __init__(self, items=None, *args, **kwargs):
-        self.items = items or []
-        if type(self.items) is not list:
-            self.items = [self.items]
-        super().__init__(*args, **kwargs)
-
-    def serialize(self):
-        items = []
-        if len(self.items) > 1:
-            items = Tuple(self.items).serialize()
-        elif self.items:
-            items = serialize_schema(self.items[0])
-        return {
-            "type": "array",
-            "items": items
-        }
-
-
-class Object(Field):
-    name = str
-
-    def __init__(self, cls, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.cls = cls
-        self.name = cls.__name__
-
-        if self.cls not in schemas:
-            schemas[self.cls] = (self, self.definition)
+    def __init__(self, **kwargs):
+        self.__fields = self.guard(kwargs)
 
     @property
-    def definition(self):
-        return {
-            "type": "object",
-            "properties": {
-                key: serialize_schema(schema) for key, schema in self.cls.__dict__.items() if not key.startswith("_")
-            },
-            **super().serialize()
-        }
+    def fields(self) -> Dict[str, Any]:
+        return self.__fields
+
+    def guard(self, fields: Dict[str, Any])-> Dict[str, Any]:
+        return {x: v for x, v in fields.items() if x in get_type_hints(self.__class__).keys()}
 
     def serialize(self):
-        return {
-            "$ref": "#/components/schemas/{}".format(self.name),
-            **super().serialize()
-        }
+        return serialize(self.fields)
+
+    def __str__(self):
+        return json.dumps(self.serialize())
 
 
-def serialize_schema(schema):
-    schema_type = type(schema)
+class Schema(Definition):
+    type: str
+    format: str
+    description: str
+    nullable: False
+    default: None
+    example: None
+    oneOf: List[Definition]
+    anyOf: List[Definition]
+    allOf: List[Definition]
 
-    # --------------------------------------------------------------- #
-    # Class
-    # --------------------------------------------------------------- #
-    if schema_type is type:
-        if issubclass(schema, Field):
-            return schema().serialize()
-        elif schema is dict:
-            return Dictionary().serialize()
-        elif schema is list:
-            return List().serialize()
-        elif schema is int:
-            return Integer().serialize()
-        elif schema is float:
-            return Float().serialize()
-        elif schema is str:
-            return String().serialize()
-        elif schema is bool:
-            return Boolean().serialize()
-        elif schema is date:
-            return Date().serialize()
-        elif schema is datetime:
-            return DateTime().serialize()
+
+class Boolean(Schema):
+    def __init__(self, **kwargs):
+        super().__init__(type="boolean", **kwargs)
+
+
+class Integer(Schema):
+    def __init__(self, **kwargs):
+        super().__init__(type="integer", format="int32", **kwargs)
+
+
+class Long(Schema):
+    def __init__(self, **kwargs):
+        super().__init__(type="integer", format="int64", **kwargs)
+
+
+class Float(Schema):
+    def __init__(self, **kwargs):
+        super().__init__(type="number", format="float", **kwargs)
+
+
+class Double(Schema):
+    def __init__(self, **kwargs):
+        super().__init__(type="number", format="double", **kwargs)
+
+
+class String(Schema):
+    def __init__(self, **kwargs):
+        super().__init__(type="string", **kwargs)
+
+
+class Byte(Schema):
+    def __init__(self, **kwargs):
+        super().__init__(type="string", format="byte", **kwargs)
+
+
+class Binary(Schema):
+    def __init__(self, **kwargs):
+        super().__init__(type="string", format="binary", **kwargs)
+
+
+class Date(Schema):
+    def __init__(self, **kwargs):
+        super().__init__(type="string", format="date", **kwargs)
+
+
+class DateTime(Schema):
+    def __init__(self, **kwargs):
+        super().__init__(type="string", format="date-time", **kwargs)
+
+
+class Password(Schema):
+    def __init__(self, **kwargs):
+        super().__init__(type="string", format="password", **kwargs)
+
+
+class Email(Schema):
+    def __init__(self, **kwargs):
+        super().__init__(type="string", format="email", **kwargs)
+
+
+class Object(Schema):
+    properties: Dict[str, Schema]
+
+    def __init__(self, properties: Dict[str, Schema]=None, **kwargs):
+        super().__init__(type="object", properties=properties or {}, **kwargs)
+
+
+class Array(Schema):
+    items: Schema
+
+    def __init__(self, items: Schema, **kwargs):
+        super().__init__(type="array", items=items, **kwargs)
+
+
+def serialize(value) -> Any:
+    if isinstance(value, Definition):
+        return value.serialize()
+
+    if isinstance(value, dict):
+        return {k: serialize(v) for k, v in value.items()}
+
+    if isinstance(value, list):
+        return [serialize(v) for v in value]
+
+    return value
+
+
+def scheme(value: Any) -> Optional[Schema]:
+    def __recur(fields: Dict):
+        return {k: scheme(v) for k, v in fields.items()}
+
+    if isinstance(value, Schema):
+        return value
+
+    if value == bool:
+        return Boolean()
+    elif value == int:
+        return Integer()
+    elif value == float:
+        return Float()
+    elif value == str:
+        return String()
+    elif value == bytes:
+        return Byte()
+    elif value == bytearray:
+        return Binary()
+    elif value == date:
+        return Date()
+    elif value == datetime:
+        return DateTime()
+
+    _type = type(value)
+
+    if _type == bool:
+        return Boolean(default=value)
+    elif _type == int:
+        return Integer(default=value)
+    elif _type == float:
+        return Float(default=value)
+    elif _type == str:
+        return String(default=value)
+    elif _type == bytes:
+        return Byte(default=value)
+    elif _type == bytearray:
+        return Binary(default=value)
+    elif _type == date:
+        return Date()
+    elif _type == datetime:
+        return DateTime()
+    elif _type == list:
+        if len(value) == 0:
+            schema = Schema(nullable=True)
+        elif len(value) == 1:
+            schema = scheme(value[0])
         else:
-            return Object(schema).serialize()
+            schema = Schema(oneOf=[scheme(x) for x in value])
 
-    # --------------------------------------------------------------- #
-    # Object
-    # --------------------------------------------------------------- #
-    else:
-        if issubclass(schema_type, Field):
-            return schema.serialize()
-        elif schema_type is dict:
-            return Dictionary(schema).serialize()
-        elif schema_type is list:
-            return List(schema).serialize()
+        return Array(schema)
+    elif _type == dict:
+        return Object(__recur(value))
+    elif _type == type:  # value = class name
+        props = {}
 
-    return {}
+        if hasattr(value, '__dict__'):
+            props = {x: v for x, v in value.__dict__.items() if not x.startswith('_')}
+
+        return Object(__recur({**get_type_hints(_type), **props}))
