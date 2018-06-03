@@ -1,12 +1,10 @@
 import re
+
 from collections import defaultdict
 from itertools import repeat
-
 from sanic import Sanic
 from sanic.views import CompositionView
-
-from sanic_openapi3.shema import *
-from sanic_openapi3.types import scheme
+from sanic_openapi3.definitions import *
 
 
 class OperationBuilder:
@@ -164,14 +162,7 @@ def deprecated():
 
 def body(content: Any, **kwargs):
     def inner(func):
-        media_types = content
-
-        if content is not dict:
-            media_types = {'*/*': content or {}}
-
-        media_types = {x: MediaType(scheme(v)) for x, v in media_types.items()}
-
-        spec.operations[func].requestBody = RequestBody(media_types, **kwargs)
+        spec.operations[func].requestBody = RequestBody(media(content), **kwargs)
         return func
     return inner
 
@@ -185,18 +176,10 @@ def parameter(name: str, schema: Any, location: str = 'query', **kwargs):
     return inner
 
 
-def response(status, content: Any=None, **kwargs):
+def response(status, content: Any=None, desc: str=None, **kwargs):
     def inner(func):
-        media_types = content
+        _desc = desc or 'Response %s' % status
 
-        if content is not dict:
-            media_types = {'*/*': content or {}}
-
-        media_types = {x: MediaType(scheme(v)) for x, v in media_types.items()}
-
-        if 'description' not in kwargs:
-            kwargs['description'] = 'Response %s' % status
-
-        spec.operations[func].responses[status] = Response(media_types, **kwargs)
+        spec.operations[func].responses[status] = Response(media(content), description=_desc, **kwargs)
         return func
     return inner
