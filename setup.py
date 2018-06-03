@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='sanic-openapi3',
-    version='0.0.1',
+    version='0.0.2',
     author='Anton Shabouta',
     author_email='zloyusr@gmail.com',
     description='OpenAPI v3 support for Sanic',
