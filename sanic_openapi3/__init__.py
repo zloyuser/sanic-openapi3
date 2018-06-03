@@ -1,5 +1,5 @@
-from .main import blueprint as openapi_blueprint
+from .main import blueprint
 
-__all__ = ['openapi_blueprint']
+__all__ = ['blueprint']
 
-name = 'sanic_openapi3'
+name = 'sanic-openapi3'

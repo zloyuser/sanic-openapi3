@@ -1,13 +1,13 @@
 from sanic import Sanic, Blueprint
 from sanic.response import json
-from sanic_openapi3 import openapi, openapi_blueprint
+from sanic_openapi3 import openapi, blueprint
 from examples.todos.data import *
 
 
-blueprint = Blueprint('todo', 'todo')
+todos = Blueprint('todo', 'todo')
 
 
-@blueprint.get("/", strict_slashes=True)
+@todos.get("/", strict_slashes=True)
 @openapi.summary("Fetches all todos")
 @openapi.description("Really gets the job done fetching these todos. I mean, really, wow.")
 @openapi.response(200, TodoList)
@@ -15,23 +15,25 @@ def todo_list(request):
     return json(test_list)
 
 
-@blueprint.get("/<todo_id:int>", strict_slashes=True)
+@todos.get("/<todo_id:int>", strict_slashes=True)
 @openapi.summary("Fetches a todo item by ID")
 @openapi.response(200, Todo)
 def todo_get(request, todo_id):
     return json(test_todo)
 
 
-@blueprint.put("/<todo_id:int>", strict_slashes=True)
+@todos.put("/<todo_id:int>", strict_slashes=True)
 @openapi.summary("Updates a todo item")
-@openapi.body(Todo, 'Todo object for update')
+@openapi.body(Todo, description='Todo object for update')
 @openapi.parameter('AUTHORIZATION', str, 'header')
 @openapi.response(200, Todo)
+# @security.api_key('api_key', 'API_KEY')
+# @security.api_key('api_secret', 'API_SECRET')
 def todo_put(request, todo_id):
     return json(test_todo)
 
 
-@blueprint.delete("/<todo_id:int>", strict_slashes=True)
+@todos.delete("/<todo_id:int>", strict_slashes=True)
 @openapi.summary("Deletes a todo")
 @openapi.response(204)
 def todo_delete(request, todo_id):
@@ -40,7 +42,7 @@ def todo_delete(request, todo_id):
 
 app = Sanic()
 
-app.blueprint(openapi_blueprint)
+app.blueprint(todos)
 app.blueprint(blueprint)
 
 app.config.OPENAPI_VERSION = '0.0.1'
