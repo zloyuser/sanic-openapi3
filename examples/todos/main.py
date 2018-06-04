@@ -10,6 +10,7 @@ todos = Blueprint('todo', 'todo')
 @todos.get("/", strict_slashes=True)
 @openapi.summary("Fetches all todos")
 @openapi.description("Really gets the job done fetching these todos. I mean, really, wow.")
+@openapi.parameter('done', bool)
 @openapi.response(200, TodoList)
 def todo_list(request):
     return json(test_list)
@@ -25,10 +26,8 @@ def todo_get(request, todo_id):
 @todos.put("/<todo_id:int>", strict_slashes=True)
 @openapi.summary("Updates a todo item")
 @openapi.body(Todo, description='Todo object for update')
-@openapi.parameter('AUTHORIZATION', str, 'header')
 @openapi.response(200, Todo)
-# @security.api_key('api_key', 'API_KEY')
-# @security.api_key('api_secret', 'API_SECRET')
+@openapi.secured(TodoApiKey)
 def todo_put(request, todo_id):
     return json(test_todo)
 
@@ -36,6 +35,7 @@ def todo_put(request, todo_id):
 @todos.delete("/<todo_id:int>", strict_slashes=True)
 @openapi.summary("Deletes a todo")
 @openapi.response(204)
+@openapi.secured(TodoApiKey)
 def todo_delete(request, todo_id):
     return json({})
 

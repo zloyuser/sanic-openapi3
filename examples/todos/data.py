@@ -1,6 +1,7 @@
 import datetime
 
-from examples.todos.models import Todo, TodoList
+from examples.todos.models import *
+
 
 test_todo: Todo = {
     'id': 1,
