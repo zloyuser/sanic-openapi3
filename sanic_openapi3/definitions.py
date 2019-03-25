@@ -139,7 +139,7 @@ class Parameter(Definition):
 
     @property
     def fields(self):
-        values = super().fields
+        values = super().fields.copy()
 
         values['in'] = values.pop('location')
 
